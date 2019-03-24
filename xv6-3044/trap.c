@@ -14,6 +14,11 @@ extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
 
+extern struct {
+	struct spinlock lock;
+	struct proc proc[NPROC];
+}ptable;
+
 void
 tvinit(void)
 {
@@ -33,6 +38,17 @@ idtinit(void)
 }
 
 //PAGEBREAK: 41
+void checkRuntime()
+{
+	struct proc *p;
+	
+	acquire(&ptable.lock);
+	for(p = ptable.proc ; p< &ptable.proc[NPROC];p++)
+	{
+		if(p->state == RUNNING) p->runtime++;
+	}
+	release(&ptable.lock);
+}
 void
 trap(struct trapframe *tf)
 {
@@ -51,6 +67,7 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
+	  checkRuntime();
       wakeup(&ticks);
       release(&tickslock);
     }
@@ -102,9 +119,9 @@ trap(struct trapframe *tf)
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
-  if(myproc() && myproc()->state == RUNNING &&
-     tf->trapno == T_IRQ0+IRQ_TIMER)
-    yield();
+  //if(myproc() && myproc()->state == RUNNING &&
+  //   tf->trapno == T_IRQ0+IRQ_TIMER)
+  //  yield();
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)

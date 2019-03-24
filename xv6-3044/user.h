@@ -17,12 +17,16 @@ int unlink(const char*);
 int fstat(int fd, struct stat*);
 int link(const char*, const char*);
 int mkdir(const char*);
+void ps(void);
 int chdir(const char*);
 int dup(int);
 int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+void ps(void);
+int setnice(int pid, int nice);
+int getnice(int pid);
 
 // ulib.c
 int stat(const char*, struct stat*);

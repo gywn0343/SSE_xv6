@@ -12,6 +12,7 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
+extern uint ticks;
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -141,6 +142,8 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
+  p->priority = 5;
+  p->runtime = 0;
 
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
@@ -211,6 +214,8 @@ fork(void)
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
 
   pid = np->pid;
+  np->priority = curproc->priority;
+  np->runtime = 0;
 
   acquire(&ptable.lock);
 
@@ -532,3 +537,87 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+char* getState(int in)
+{
+	switch(in)
+	{
+		case UNUSED:
+			return "UNUSED";
+		case EMBRYO:
+			return "EMBRYO";
+		case SLEEPING:
+			return "SLEEPING";
+		case RUNNABLE:
+			return "RUNNABLE";
+		case RUNNING:
+			return "RUNNING";
+		case ZOMBIE:
+			return "ZOMBIE";
+		default:
+			return "";
+	}
+}
+
+void 
+ps(void)
+{
+    struct proc *p;
+	cprintf("name / pid / state / priority / runtime / ticks %d\n", ticks);
+	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+	{
+		if(p->state != UNUSED)
+		{
+			cprintf("%s	%d	%s 	%d	%d\n", 
+					p->name, 
+					p->pid, 
+					getState(p->state), 
+					p->priority, 
+					p->runtime);
+		}
+	}
+}
+
+int setnice(int pid, int nice)
+{
+	struct proc *p;
+	int ret = -1;
+
+	if(nice < 0 || nice > 10) return -1;
+
+	acquire(&ptable.lock);
+
+	for(p = ptable.proc; p < &ptable.proc[NPROC];p++)
+	{
+		if(p->state != UNUSED && p->pid == pid)
+		{
+			ret = 1;
+			p->priority = nice;
+			break;
+		}
+	}
+	release(&ptable.lock);
+
+	return ret;
+}
+
+int getnice(int pid)
+{
+	struct proc *p;
+	int ret = -1;
+	acquire(&ptable.lock);
+
+	for(p = ptable.proc; p < &ptable.proc[NPROC];p++)
+	{
+		if(p->state != UNUSED && p->pid == pid)
+		{
+			ret = p->priority;
+			break;
+		}
+	}
+	release(&ptable.lock);
+
+	return ret;
+}
+
+

@@ -7,10 +7,20 @@
 #include "mmu.h"
 #include "proc.h"
 
+extern void ps();
+extern int setnice(int, int);
+extern int getnice(int);
+
 int
 sys_fork(void)
 {
   return fork();
+}
+int 
+sys_yield(void)
+{
+	yield();
+	return 1;
 }
 
 int
@@ -75,6 +85,29 @@ sys_sleep(void)
   }
   release(&tickslock);
   return 0;
+}
+int 
+sys_ps(void)
+{
+	ps();
+	return 0;
+}
+
+int 
+sys_setnice(void)
+{
+	int pid;
+	int nice;
+	if(argint(0, &pid) < 0) return -1;
+	if(argint(1, &nice) < 0) return -1;
+	return setnice(pid, nice);
+}
+
+int sys_getnice(void)
+{
+	int pid;
+	if(argint(0, &pid) < 0) return -1;
+	return getnice(pid);
 }
 
 // return how many clock tick interrupts have occurred
